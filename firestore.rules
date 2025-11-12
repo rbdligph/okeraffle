@@ -1,0 +1,40 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public read access to a 'public' collection
+    match /public/{document=**} {
+      allow read: if true;
+    }
+
+    // Allow write access to the 'registrations' collection for anyone.
+    // In a production app, you would want to restrict this.
+    match /registrations/{registrationId} {
+      allow create: if true;
+      allow read: if request.auth != null;
+    }
+    
+    // Allow admin (authenticated users) to manage raffle items
+    match /raffleItems/{itemId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow admin to manage winners
+    match /winners/{winnerId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow public read for settings, but only admin write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Lock down all other collections by default.
+    // This was missing and is the likely cause of the error.
+    // All paths need to be either explicitly allowed or denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-image",
+      "description": "People at a modern event with purple lighting",
+      "imageUrl": "https://picsum.photos/seed/raffle1/650/450",
+      "imageHint": "event celebration"
+    }
+  ]
+}
