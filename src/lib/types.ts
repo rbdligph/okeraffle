@@ -2,7 +2,6 @@ export type Registration = {
   id: string;
   fullName: string;
   email: string;
-  raffleNumber: string;
   createdAt: Date;
 };
 
@@ -17,7 +16,6 @@ export type Winner = {
   id: string; // Composite key like `round-registrationId`
   registrationId: string;
   fullName: string;
-  raffleNumber: string;
   prizeId: string;
   prizeName: string;
   prizeType: 'minor' | 'major' | 'grand';

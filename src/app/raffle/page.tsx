@@ -193,7 +193,6 @@ function RafflePage() {
                     id: `${currentRound}-${registrationId}`,
                     registrationId,
                     fullName: registration.fullName,
-                    raffleNumber: registration.raffleNumber,
                     prizeId,
                     prizeName: prize.name,
                     prizeType: prize.prizeType,

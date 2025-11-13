@@ -69,7 +69,6 @@ function WinnersTable({
                   <SortableHeader sortKey="fullName">Winner</SortableHeader>
                   <SortableHeader sortKey="prizeName">Prize Won</SortableHeader>
                   <SortableHeader sortKey="prizeType">Prize Type</SortableHeader>
-                  <SortableHeader sortKey="round">Round</SortableHeader>
                   <SortableHeader sortKey="confirmedAt">Date Won</SortableHeader>
                 </TableRow>
               </TableHeader>
@@ -88,7 +87,6 @@ function WinnersTable({
                             'secondary'
                         } className="capitalize">{winner.prizeType}</Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-center">{winner.round}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">
                         {formatRegistrationDate(winner.confirmedAt)}
                       </TableCell>

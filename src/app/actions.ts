@@ -177,7 +177,7 @@ export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[
     for (let i = 0; i < validatedFields.data.length; i++) {
         const item = validatedFields.data[i];
         if (uniqueItemIds.has(item.id)) {
-            duplicateRows.push(`Row ${i+2}: Duplicate Item ID \"${item.id}\" found in CSV.`);
+            duplicateRows.push(`Row ${i+2}: Duplicate Item ID "${item.id}" found in CSV.`);
         }
         uniqueItemIds.add(item.id);
     }
@@ -198,7 +198,7 @@ export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[
         for (let i = 0; i < validatedFields.data.length; i++) {
             const item = validatedFields.data[i];
             if (existingItemIds.has(item.id)) {
-                errors.push(`Row ${i + 2}: Item ID \"${item.id}\" already exists in the database.`);
+                errors.push(`Row ${i + 2}: Item ID "${item.id}" already exists in the database.`);
                 continue;
             }
             
