@@ -40,43 +40,6 @@ export type BulkUploadState = {
     successCount?: number;
 }
 
-// Function to generate a unique raffle number
-async function generateUniqueRaffleNumber(db: Firestore): Promise<string> {
-  const registrationsRef = collection(db, 'registrations');
-  let isUnique = false;
-  let raffleNumber: string;
-
-  // Keep track of checked numbers to avoid infinite loops if all numbers are taken.
-  const checkedNumbers = new Set<string>();
-  const maxAttempts = 100; // There are 100 possible numbers (1-100)
-
-  while (!isUnique && checkedNumbers.size < maxAttempts) {
-    // Generate a random number between 1 and 100
-    raffleNumber = (Math.floor(Math.random() * 100) + 1).toString().padStart(3, '0');
-
-    if (checkedNumbers.has(raffleNumber)) {
-      continue; // Skip if we've already checked this number
-    }
-    
-    // Check if the number already exists in the database
-    const q = query(registrationsRef, where('raffleNumber', '==', raffleNumber));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      isUnique = true;
-    } else {
-      checkedNumbers.add(raffleNumber);
-    }
-  }
-
-  if (!isUnique) {
-    throw new Error('All raffle numbers are currently taken. Please try again later.');
-  }
-
-  return raffleNumber!;
-}
-
-
 export async function registerUser(prevState: FormState, formData: FormData): Promise<FormState> {
     const { firestore } = initializeFirebase();
     if (!firestore) {
@@ -107,28 +70,19 @@ export async function registerUser(prevState: FormState, formData: FormData): Pr
   const existingRegistration = await getRegistration(firestore, email);
 
   if (existingRegistration) {
-    redirect(`/success?name=${encodeURIComponent(existingRegistration.fullName)}&raffleNumber=${existingRegistration.raffleNumber}&existing=true`);
+    redirect(`/success?name=${encodeURIComponent(existingRegistration.fullName)}&existing=true`);
   }
   
-  let raffleNumber: string;
-  try {
-    raffleNumber = await generateUniqueRaffleNumber(firestore);
-  } catch (error: any) {
-    return {
-      message: error.message || 'An unexpected error occurred. Please try again.',
-    };
-  }
-
-  addRegistration(firestore, { fullName, email, raffleNumber });
+  addRegistration(firestore, { fullName, email });
 
   // In a real application, you would use a service like Resend or SendGrid here.
   console.log(`-- Confirmation Email Sent (Simulation) --
 To: ${email}
 Subject: Your Oke Raffle Registration is Confirmed!
-Body: Hi ${fullName}, thank you for registering for our event. Your unique raffle number is ${raffleNumber}. Good luck!
+Body: Hi ${fullName}, thank you for registering for our event. Good luck!
 ------------------------------------------`);
 
-  redirect(`/success?name=${encodeURIComponent(fullName)}&raffleNumber=${raffleNumber}`);
+  redirect(`/success?name=${encodeURIComponent(fullName)}`);
 }
 
 export async function createOrUpdateRaffleItem(prevState: FormState, formData: FormData): Promise<FormState> {
@@ -223,7 +177,7 @@ export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[
     for (let i = 0; i < validatedFields.data.length; i++) {
         const item = validatedFields.data[i];
         if (uniqueItemIds.has(item.id)) {
-            duplicateRows.push(`Row ${i+2}: Duplicate Item ID "${item.id}" found in CSV.`);
+            duplicateRows.push(`Row ${i+2}: Duplicate Item ID \"${item.id}\" found in CSV.`);
         }
         uniqueItemIds.add(item.id);
     }
@@ -244,7 +198,7 @@ export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[
         for (let i = 0; i < validatedFields.data.length; i++) {
             const item = validatedFields.data[i];
             if (existingItemIds.has(item.id)) {
-                errors.push(`Row ${i + 2}: Item ID "${item.id}" already exists in the database.`);
+                errors.push(`Row ${i + 2}: Item ID \"${item.id}\" already exists in the database.`);
                 continue;
             }
             

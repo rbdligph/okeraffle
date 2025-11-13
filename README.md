@@ -1,14 +1,12 @@
 
 # Oke Raffle
 
-Oke Raffle is a web-based application designed to streamline the raffle process for events. It allows users to register, receive a unique raffle number, and get a QR code for their entry. Event staff can manage registrations and raffle settings through an admin panel.
+Oke Raffle is a web-based application designed to streamline the raffle process for events. It allows users to register via name and email. Event staff can manage registrations and raffle settings through an admin panel.
 
 ## Core Features
 
 - **Registration Form**: Collect user information (email, full name) via a registration form.
-- **Unique Number Generation**: Automatically assign a unique raffle number upon successful registration.
 - **QR Code Generation**: Generate a QR code linking directly to the registration website.
-- **Confirmation Email**: Send a confirmation email containing the user's raffle number.
 - **Admin Panel**: A CMS allowing event staff to manage registrations and raffle settings.
 
 ## Getting Started
