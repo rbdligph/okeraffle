@@ -10,11 +10,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Confetti } from '@/components/confetti';
 import type { Winner } from '@/lib/types';
 import { Badge } from './ui/badge';
 import { Trophy } from 'lucide-react';
 import { useMemo } from 'react';
+import { Confetti } from './confetti';
 
 export function WinnersDialog({
   isOpen,
@@ -39,8 +39,8 @@ export function WinnersDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {isOpen && <Confetti />}
       <DialogContent className="max-w-2xl">
-        <Confetti active={isOpen} />
         <DialogHeader>
           <div className="flex flex-col items-center">
             <Trophy className="h-16 w-16 text-yellow-400 mb-4" />
