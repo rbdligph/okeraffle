@@ -17,7 +17,7 @@ import type { Registration, RaffleItem, Winner } from './types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-// Simulate database latency
+// Simulate database latency test
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 
