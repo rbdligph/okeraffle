@@ -45,7 +45,7 @@ export function RegistrationForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email Address</Label>
-        <Input id="email" name="email" type="email" placeholder="e.g., jane.doe@example.com" required autoComplete="email" />
+        <Input id="email" name="email" type="email" placeholder="e.g., jane_doe@cody.inc" required autoComplete="email" />
         {state.errors?.email && (
           <p className="text-sm font-medium text-destructive">{state.errors.email.join(', ')}</p>
         )}
