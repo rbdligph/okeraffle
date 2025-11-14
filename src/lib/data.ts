@@ -17,7 +17,7 @@ import type { Registration, RaffleItem, Winner } from './types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-// Simulate database latency
+// Simulate database latency test
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 
@@ -31,6 +31,7 @@ export async function getRegistration(db: Firestore, email: string): Promise<Reg
       id: docSnap.id,
       fullName: data.fullName,
       email: data.email,
+      raffleNumber: data.raffleNumber,
       createdAt: data.createdAt.toDate(),
     };
   }
@@ -51,6 +52,7 @@ export async function getRegistrations(db: Firestore): Promise<Registration[]> {
         id: doc.id,
         fullName: data.fullName,
         email: data.email,
+        raffleNumber: data.raffleNumber,
         createdAt: data.createdAt.toDate(),
         } as Registration;
     });
