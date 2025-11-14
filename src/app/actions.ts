@@ -9,7 +9,10 @@ import { revalidatePath } from 'next/cache';
 
 const registrationSchema = z.object({
   fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }).refine(
+    (email) => email.endsWith('@cody.inc'),
+    { message: 'Only emails from "@cody.inc" are allowed.' }
+  ),
 });
 
 const raffleItemSchema = z.object({
@@ -31,6 +34,8 @@ export type FormState = {
     description?: string[];
     prizeType?: string[];
     form?: string[];
+    fullName?: string[];
+    email?: string[];
   };
 };
 
