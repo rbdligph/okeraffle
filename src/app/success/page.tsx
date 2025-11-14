@@ -50,7 +50,7 @@ function SuccessContent({
 export default function SuccessPage({
   searchParams,
 }: {
-  searchParams: { name?: string; existing?: string };
+  searchParams: { name?: string; raffleNumber?: string; existing?: string };
 }) {
   const { name, existing } = searchParams;
   const isExisting = existing === 'true';
@@ -63,6 +63,7 @@ export default function SuccessPage({
         ) : (
           <div className="text-center py-20">
             <p className="font-bold text-destructive">Invalid access.</p>
+            <p className="text-muted-foreground">Please register first to get a raffle number.</p>
             <Button asChild variant="link">
               <Link href="/">Go to Registration</Link>
             </Button>

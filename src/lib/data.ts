@@ -31,6 +31,7 @@ export async function getRegistration(db: Firestore, email: string): Promise<Reg
       id: docSnap.id,
       fullName: data.fullName,
       email: data.email,
+      raffleNumber: data.raffleNumber,
       createdAt: data.createdAt.toDate(),
     };
   }
@@ -51,6 +52,7 @@ export async function getRegistrations(db: Firestore): Promise<Registration[]> {
         id: doc.id,
         fullName: data.fullName,
         email: data.email,
+        raffleNumber: data.raffleNumber,
         createdAt: data.createdAt.toDate(),
         } as Registration;
     });
