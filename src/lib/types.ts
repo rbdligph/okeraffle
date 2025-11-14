@@ -13,7 +13,7 @@ export type RaffleItem = {
 };
 
 export type Winner = {
-  id: string; // Composite key like `round-registrationId`
+  id: string; // Composite key like `round-registrationId` test
   registrationId: string;
   fullName: string;
   prizeId: string;
