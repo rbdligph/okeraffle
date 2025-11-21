@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RegistrationForm } from '@/components/registration-form';
 import { QrCodeDisplay } from '@/components/qr-code-display';
@@ -29,8 +30,8 @@ export default async function Home() {
               <div className="w-full grid md:grid-cols-2 gap-8 items-stretch justify-center max-w-4xl">
                 <Card className="w-full flex flex-col">
                   <CardHeader>
-                    <CardTitle>Register Now</CardTitle>
-                    <CardDescription>Fill out the form below to get your raffle number.</CardDescription>
+                    <CardTitle>Confirm your Attendance</CardTitle>
+                    <CardDescription>Enter your email address to confirm your registration.</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col justify-center">
                     <RegistrationForm />
@@ -41,7 +42,7 @@ export default async function Home() {
                     <CardTitle>Scan to Register</CardTitle>
                     <CardDescription>Use your phone to scan the QR code and register on the go.</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-1 flex flex-col items-center justify-center p-6">
+                  <CardContent className="flex-1 flex flex-col items-center justify-center p-6 min-h-[280px]">
                     <QrCodeDisplay />
                   </CardContent>
                 </Card>

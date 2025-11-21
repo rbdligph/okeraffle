@@ -50,7 +50,7 @@ function SuccessContent({
 export default function SuccessPage({
   searchParams,
 }: {
-  searchParams: { name?: string; raffleNumber?: string; existing?: string };
+  searchParams: { name?: string; existing?: string };
 }) {
   const { name, existing } = searchParams;
   const isExisting = existing === 'true';

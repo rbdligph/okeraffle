@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
-import { getRegistrations, getRaffleItems, getWinners, addWinners } from '@/lib/data';
+import { getRegistrations, getWinners, addWinners, getRaffleItems } from '@/lib/data';
 import type { Registration, RaffleItem, Winner } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { WinnersDialog } from '@/components/winners-dialog';
 import { DraftedParticipantsDialog } from '@/components/drafted-participants-dialog';
 
+
 type SortKey = 'fullName' | 'round';
 type SortDirection = 'asc' | 'desc';
 type PrizeFilter = 'all' | 'grand' | 'major' | 'minor';
@@ -41,8 +42,8 @@ function RafflePage() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const [allRegistrations, setAllRegistrations] = useState<Registration[]>([]);
     const [allRaffleItems, setAllRaffleItems] = useState<RaffleItem[]>([]);
+    const [allRegistrations, setAllRegistrations] = useState<Registration[]>([]);
     const [pastWinners, setPastWinners] = useState<Winner[]>([]);
     const [loading, setLoading] = useState(true);
     const [numWinners, setNumWinners] = useState<number>(1);
@@ -69,15 +70,15 @@ function RafflePage() {
     const fetchData = async () => {
         if (user && firestore) {
             setLoading(true);
-            const [regs, items, winners] = await Promise.all([
+            const [regs, winners, items] = await Promise.all([
                 getRegistrations(firestore),
-                getRaffleItems(firestore),
                 getWinners(firestore),
+                getRaffleItems(firestore),
             ]);
             
             setAllRegistrations(regs);
-            setAllRaffleItems(items);
             setPastWinners(winners);
+            setAllRaffleItems(items);
 
             const maxRound = winners.reduce((max, winner) => Math.max(max, winner.round), 0);
             setCurrentRound(maxRound + 1);
@@ -93,7 +94,7 @@ function RafflePage() {
 
     const undraftedRegistrations = useMemo(() => {
         const winnerIds = new Set(pastWinners.map(w => w.registrationId));
-        return allRegistrations.filter(reg => !winnerIds.has(reg.id));
+        return allRegistrations.filter(reg => !winnerIds.has(reg.id) && reg.confirmed);
     }, [allRegistrations, pastWinners]);
 
      const sortedPastWinners = useMemo(() => {
@@ -126,7 +127,7 @@ function RafflePage() {
             if (prizeFilter === 'all') return true;
             return item.prizeType === prizeFilter;
         });
-    }, [allRaffleItems, prizeAssignments, pastWinners, prizeFilter]);
+    }, [prizeAssignments, pastWinners, prizeFilter, allRaffleItems]);
 
     const handleSort = (key: SortKey) => {
         setSortConfig(prevConfig => ({
@@ -193,7 +194,6 @@ function RafflePage() {
                     id: `${currentRound}-${registrationId}`,
                     registrationId,
                     fullName: registration.fullName,
-                    raffleNumber: registration.raffleNumber,
                     prizeId,
                     prizeName: prize.name,
                     prizeType: prize.prizeType,
@@ -260,12 +260,12 @@ function RafflePage() {
                 <div className="lg:col-span-1 space-y-8">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Remaining Participants</CardTitle>
+                            <CardTitle className="text-sm font-medium">Eligible Participants</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{undraftedRegistrations.length}</div>
-                            <p className="text-xs text-muted-foreground">of {allRegistrations.length} total registrations</p>
+                            <p className="text-xs text-muted-foreground">of {allRegistrations.filter(r => r.confirmed).length} confirmed registrations</p>
                         </CardContent>
                     </Card>
 

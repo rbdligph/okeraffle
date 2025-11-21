@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Users, Gift, Ticket, Trophy } from 'lucide-react';
+import { LayoutDashboard, Users, Ticket, Trophy, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -35,7 +35,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pageTitle = useMemo(() => {
     if (pathname === '/admin') return 'Dashboard';
     if (pathname === '/admin/users') return 'User List';
-    if (pathname === '/admin/raffle-items') return 'Raffle Items';
+    if (pathname === '/admin/raffle-items') return 'Raffle Prizes';
     if (pathname === '/admin/winners') return 'Winners List';
     return 'Admin';
   }, [pathname]);
@@ -81,11 +81,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/admin/raffle-items'}
-                tooltip={{ children: 'Raffle Items' }}
+                tooltip={{ children: 'Raffle Prizes' }}
               >
                 <Link href="/admin/raffle-items">
                   <Gift />
-                  <span>Raffle Items</span>
+                  <span>Raffle Prizes</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -1,29 +1,33 @@
+
 'use server';
 
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { addRegistration, getRegistration, addRaffleItem, updateRaffleItem as dbUpdateRaffleItem, deleteRaffleItem as dbDeleteRaffeItem, getRaffleItem, getRegistrationStatus, setRegistrationStatus as dbSetRegistrationStatus } from '@/lib/data';
+import { getRegistration, setRegistrationStatus as dbSetRegistrationStatus, confirmRegistration, getRegistrationStatus, addRaffleItem, updateRaffleItem, deleteRaffleItem as dbDeleteRaffleItem } from '@/lib/data';
 import { initializeFirebase } from '@/firebase';
-import { collection, getDocs, query, where, type Firestore, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, query, where, type Firestore, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 
 const registrationSchema = z.object({
-  fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }).refine(
     (email) => email.endsWith('@cody.inc'),
     { message: 'Only emails from "@cody.inc" are allowed.' }
   ),
 });
 
-const raffleItemSchema = z.object({
-    id: z.string().min(1, { message: 'Item ID is required.' }),
-    name: z.string().min(3, { message: 'Item name must be at least 3 characters.' }),
-    description: z.string().min(3, { message: 'Description must be at least 3 characters.' }),
-    prizeType: z.enum(['minor', 'major', 'grand'], { required_error: 'Prize type is required.' }),
+const userRegistrationSchema = z.object({
+    fullName: z.string().min(2, { message: 'Full name must be at least 2 characters.' }),
+    email: z.string().email({ message: 'Please enter a valid email address.' }),
 });
 
-const bulkRaffleItemSchema = z.array(raffleItemSchema);
+const bulkUserRegistrationSchema = z.array(userRegistrationSchema);
 
+const raffleItemSchema = z.object({
+    id: z.string().optional(),
+    name: z.string().min(3, { message: "Prize name must be at least 3 characters." }),
+    description: z.string().min(3, { message: "Description must be at least 3 characters." }),
+    prizeType: z.enum(['minor', 'major', 'grand'], { required_error: "You must select a prize type." }),
+});
 
 export type FormState = {
   message: string;
@@ -45,11 +49,66 @@ export type BulkUploadState = {
     successCount?: number;
 }
 
+export async function createOrUpdateRaffleItem(prevState: FormState, formData: FormData): Promise<FormState> {
+    const { firestore } = initializeFirebase();
+    if (!firestore) {
+        return { message: "Database not available.", errors: {} };
+    }
+
+    const validatedFields = raffleItemSchema.safeParse({
+        id: formData.get('id') || undefined,
+        name: formData.get('name'),
+        description: formData.get('description'),
+        prizeType: formData.get('prizeType'),
+    });
+    
+    if (!validatedFields.success) {
+        return {
+            message: 'Please review your entry and try again.',
+            errors: validatedFields.error.flatten().fieldErrors,
+        };
+    }
+
+    const { id, ...itemData } = validatedFields.data;
+
+    try {
+        if (id) {
+            await updateRaffleItem(firestore, id, itemData);
+        } else {
+            // Firestore will auto-generate an ID if we don't provide one.
+            const newId = doc(collection(firestore, 'raffleItems')).id;
+            await addRaffleItem(firestore, { id: newId, ...itemData });
+        }
+        revalidatePath('/admin/raffle-items');
+        revalidatePath('/raffle');
+        return { message: `Successfully ${id ? 'updated' : 'created'} prize.` };
+    } catch (error: any) {
+        return { message: `Failed to save prize: ${error.message}` };
+    }
+}
+
+
+export async function deleteRaffleItem(id: string): Promise<{ success: boolean; message?: string }> {
+    const { firestore } = initializeFirebase();
+    if (!firestore) {
+        return { success: false, message: "Database not available." };
+    }
+    
+    try {
+        await dbDeleteRaffleItem(firestore, id);
+        revalidatePath('/admin/raffle-items');
+        revalidatePath('/raffle');
+        return { success: true };
+    } catch (e: any) {
+        return { success: false, message: e.message };
+    }
+}
+
 export async function registerUser(prevState: FormState, formData: FormData): Promise<FormState> {
     const { firestore } = initializeFirebase();
     if (!firestore) {
         return {
-        message: 'Database service is not available. Please try again later.',
+            message: 'Database service is not available. Please try again later.',
         };
     }
 
@@ -58,112 +117,47 @@ export async function registerUser(prevState: FormState, formData: FormData): Pr
         return { message: 'Sorry, registration is currently closed.' };
     }
 
-  const validatedFields = registrationSchema.safeParse({
-    fullName: formData.get('fullName'),
-    email: formData.get('email'),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      message: 'Please review your entries and try again.',
-      errors: validatedFields.error.flatten().fieldErrors,
-    };
-  }
-  
-  const { fullName, email } = validatedFields.data;
-  
-  const existingRegistration = await getRegistration(firestore, email);
-
-  if (existingRegistration) {
-    redirect(`/success?name=${encodeURIComponent(existingRegistration.fullName)}&existing=true`);
-  }
-  
-  addRegistration(firestore, { fullName, email });
-
-  // In a real application, you would use a service like Resend or SendGrid here.
-  console.log(`-- Confirmation Email Sent (Simulation) --
-To: ${email}
-Subject: Your Oke Raffle Registration is Confirmed!
-Body: Hi ${fullName}, thank you for registering for our event. Good luck!
-------------------------------------------`);
-
-  redirect(`/success?name=${encodeURIComponent(fullName)}`);
-}
-
-export async function createOrUpdateRaffleItem(prevState: FormState, formData: FormData): Promise<FormState> {
-    const isEditing = !!formData.get('isEditing');
-    
-    const validatedFields = raffleItemSchema.safeParse({
-        id: formData.get('id'),
-        name: formData.get('name'),
-        description: formData.get('description'),
-        prizeType: formData.get('prizeType'),
+    const validatedFields = registrationSchema.safeParse({
+        email: formData.get('email'),
     });
 
     if (!validatedFields.success) {
         return {
-            message: 'Please review your entries and try again.',
-            isEditing,
+            message: 'Please review your entry and try again.',
             errors: validatedFields.error.flatten().fieldErrors,
         };
     }
+  
+    const { email } = validatedFields.data;
+  
+    const existingRegistration = await getRegistration(firestore, email);
 
-    const { firestore } = initializeFirebase();
-    if (!firestore) {
+    if (!existingRegistration) {
         return {
-            message: 'Database service is not available. Please try again later.',
-            isEditing,
-            errors: { form: ['Database service is not available.'] }
+            message: 'This email is not registered for the event. Please contact an admin.',
+            errors: { email: ['This email is not pre-registered.'] }
         };
     }
-    
-    const itemData = validatedFields.data;
 
-    try {
-        if (!isEditing) {
-            const existingItem = await getRaffleItem(firestore, itemData.id);
-            if (existingItem) {
-                return {
-                    message: 'This Item ID is already in use.',
-                    isEditing,
-                    errors: { id: ['This Item ID must be unique.'] }
-                };
-            }
-            await addRaffleItem(firestore, itemData);
-        } else {
-            const { id, ...updateData } = itemData;
-            await dbUpdateRaffleItem(firestore, id, updateData);
-        }
-        revalidatePath('/admin/raffle-items');
-        revalidatePath('/raffle');
-        return { message: 'Item saved successfully.' };
-    } catch (error: any) {
-        return {
-            message: 'An unexpected error occurred.',
-            isEditing,
-            errors: { form: [error.message] }
-        };
+    if (existingRegistration.confirmed) {
+        redirect(`/success?name=${encodeURIComponent(existingRegistration.fullName)}&existing=true`);
     }
+
+    await confirmRegistration(firestore, email);
+    revalidatePath('/admin/users');
+
+    // In a real application, you would use a service like Resend or SendGrid here.
+    console.log(`-- Confirmation Email Sent (Simulation) --
+To: ${email}
+Subject: Your Oke Raffle Registration is Confirmed!
+Body: Hi ${existingRegistration.fullName}, thank you for registering for our event. Good luck!
+------------------------------------------`);
+
+    redirect(`/success?name=${encodeURIComponent(existingRegistration.fullName)}`);
 }
 
-export async function deleteRaffleItem(itemId: string) {
-    const { firestore } = initializeFirebase();
-    if (!firestore) {
-        throw new Error('Database service is not available.');
-    }
-    
-    try {
-        await dbDeleteRaffeItem(firestore, itemId);
-        revalidatePath('/admin/raffle-items');
-        revalidatePath('/raffle');
-        return { message: 'Item deleted successfully.' };
-    } catch (error: any) {
-        return { error: error.message };
-    }
-}
-
-export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[]): Promise<BulkUploadState> {
-    const validatedFields = bulkRaffleItemSchema.safeParse(items);
+export async function bulkAddUsers(prevState: BulkUploadState, users: any[]): Promise<BulkUploadState> {
+    const validatedFields = bulkUserRegistrationSchema.safeParse(users);
 
     if (!validatedFields.success) {
         return {
@@ -177,39 +171,43 @@ export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[
         return { message: 'Database service is not available.' };
     }
 
-    const uniqueItemIds = new Set<string>();
+    const uniqueEmails = new Set<string>();
     const duplicateRows: string[] = [];
     for (let i = 0; i < validatedFields.data.length; i++) {
-        const item = validatedFields.data[i];
-        if (uniqueItemIds.has(item.id)) {
-            duplicateRows.push(`Row ${i+2}: Duplicate Item ID \"${item.id}\" found in CSV.`);
+        const user = validatedFields.data[i];
+        if (uniqueEmails.has(user.email)) {
+            duplicateRows.push(`Row ${i+2}: Duplicate email "${user.email}" found in CSV.`);
         }
-        uniqueItemIds.add(item.id);
+        uniqueEmails.add(user.email);
     }
     if (duplicateRows.length > 0) {
-        return { message: "CSV contains duplicate Item IDs.", errors: duplicateRows };
+        return { message: "CSV contains duplicate emails.", errors: duplicateRows };
     }
     
     let successCount = 0;
     const errors: string[] = [];
     
     try {
-        const existingItemsQuery = query(collection(firestore, "raffleItems"), where('__name__', 'in', Array.from(uniqueItemIds)));
-        const existingItemsSnapshot = await getDocs(existingItemsQuery);
-        const existingItemIds = new Set(existingItemsSnapshot.docs.map(doc => doc.id));
+        const existingUsersQuery = query(collection(firestore, "registrations"), where('email', 'in', Array.from(uniqueEmails)));
+        const existingUsersSnapshot = await getDocs(existingUsersQuery);
+        const existingEmails = new Set(existingUsersSnapshot.docs.map(doc => doc.data().email));
 
         const batch = writeBatch(firestore);
 
         for (let i = 0; i < validatedFields.data.length; i++) {
-            const item = validatedFields.data[i];
-            if (existingItemIds.has(item.id)) {
-                errors.push(`Row ${i + 2}: Item ID \"${item.id}\" already exists in the database.`);
+            const user = validatedFields.data[i];
+            if (existingEmails.has(user.email)) {
+                errors.push(`Row ${i + 2}: Email "${user.email}" already exists in the database.`);
                 continue;
             }
             
-            const { id, ...itemData } = item;
-            const newItemRef = doc(firestore, 'raffleItems', id);
-            batch.set(newItemRef, itemData);
+            const newUserRef = doc(firestore, 'registrations', user.email);
+            batch.set(newUserRef, {
+                ...user,
+                createdAt: serverTimestamp(),
+                confirmed: false,
+                confirmedAt: null,
+            });
             successCount++;
         }
 
@@ -217,8 +215,7 @@ export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[
             await batch.commit();
         }
 
-        revalidatePath('/admin/raffle-items');
-        revalidatePath('/raffle');
+        revalidatePath('/admin/users');
         return {
             message: `Upload complete.`,
             successCount,
@@ -231,6 +228,7 @@ export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[
         };
     }
 }
+
 
 export async function setRegistrationStatus(isOpen: boolean): Promise<{ success: boolean; message: string }> {
     const { firestore } = initializeFirebase();
