@@ -4,6 +4,7 @@ export type Registration = {
   email: string;
   raffleNumber: string;
   createdAt: Date;
+  confirmed: Boolean;
 };
 
 export type RaffleItem = {
