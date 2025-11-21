@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useEffect } from 'react';
@@ -14,7 +15,7 @@ function SubmitButton() {
   return (
     <Button type="submit" className="w-full" disabled={pending} size="lg">
       {pending ? <Loader2 className="animate-spin mr-2" /> : null}
-      {pending ? 'Registering...' : 'Register'}
+      {pending ? 'Confirming...' : 'Confirm Registration'}
     </Button>
   );
 }
@@ -25,9 +26,14 @@ export function RegistrationForm() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.message) {
+    if (state.message && !state.errors) {
+        // This is a success message from a redirect, which we don't want to show as a toast.
+        // Errors will be handled below.
+        return;
+    }
+    if (state.message && state.errors) {
       toast({
-        title: state.errors ? 'Registration Error' : 'Error',
+        title: 'Registration Error',
         description: state.message,
         variant: 'destructive',
       });
@@ -37,15 +43,8 @@ export function RegistrationForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="fullName">Full Name</Label>
-        <Input id="fullName" name="fullName" placeholder="e.g., Jane Doe" required autoComplete="name" />
-        {state.errors?.fullName && (
-          <p className="text-sm font-medium text-destructive">{state.errors.fullName.join(', ')}</p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="email">Email Address</Label>
-        <Input id="email" name="email" type="email" placeholder="e.g., jane_doe@cody.inc" required autoComplete="email" />
+        <Label htmlFor="email">Enter your Cody Email Address</Label>
+        <Input id="email" name="email" type="email" placeholder="e.g., jane.doe@cody.inc" required autoComplete="email" />
         {state.errors?.email && (
           <p className="text-sm font-medium text-destructive">{state.errors.email.join(', ')}</p>
         )}

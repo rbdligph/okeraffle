@@ -1,3 +1,4 @@
+
 import {
   collection,
   getDocs,
@@ -31,8 +32,9 @@ export async function getRegistration(db: Firestore, email: string): Promise<Reg
       id: docSnap.id,
       fullName: data.fullName,
       email: data.email,
-      raffleNumber: data.raffleNumber,
       createdAt: data.createdAt.toDate(),
+      confirmed: data.confirmed || false,
+      confirmedAt: data.confirmedAt ? data.confirmedAt.toDate() : undefined,
     };
   }
   return null;
@@ -49,11 +51,12 @@ export async function getRegistrations(db: Firestore): Promise<Registration[]> {
     const registrationList = registrationSnapshot.docs.map((doc) => {
         const data = doc.data();
         return {
-        id: doc.id,
-        fullName: data.fullName,
-        email: data.email,
-        raffleNumber: data.raffleNumber,
-        createdAt: data.createdAt.toDate(),
+          id: doc.id,
+          fullName: data.fullName,
+          email: data.email,
+          createdAt: data.createdAt.toDate(),
+          confirmed: data.confirmed || false,
+          confirmedAt: data.confirmedAt ? data.confirmedAt.toDate() : undefined,
         } as Registration;
     });
     return registrationList;
@@ -71,7 +74,7 @@ export async function getRegistrations(db: Firestore): Promise<Registration[]> {
 
 export function addRegistration(
   db: Firestore,
-  data: Omit<Registration, 'id' | 'createdAt'>
+  data: Omit<Registration, 'id' | 'createdAt' | 'confirmed' | 'confirmedAt'>
 ) {
   if (!db) {
     const err = new Error('Firestore is not initialized');
@@ -82,6 +85,8 @@ export function addRegistration(
   const registrationWithTimestamp = {
     ...data,
     createdAt: serverTimestamp(),
+    confirmed: false,
+    confirmedAt: null,
   };
 
   const registrationRef = doc(db, 'registrations', data.email);
@@ -95,6 +100,47 @@ export function addRegistration(
       });
       errorEmitter.emit('permission-error', permissionError);
     });
+}
+
+export async function confirmRegistration(db: Firestore, email: string): Promise<void> {
+    if (!db) throw new Error("Firestore is not initialized");
+    const registrationRef = doc(db, 'registrations', email);
+    const updateData = { 
+        confirmed: true,
+        confirmedAt: serverTimestamp()
+    };
+    try {
+        await updateDoc(registrationRef, updateData);
+    } catch (serverError) {
+        const permissionError = new FirestorePermissionError({
+            path: registrationRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw serverError;
+    }
+}
+
+export async function setRegistrationConfirmation(db: Firestore, email: string, confirmed: boolean): Promise<void> {
+    if (!db) throw new Error("Firestore is not initialized");
+    const registrationRef = doc(db, 'registrations', email);
+    const updateData = {
+        confirmed,
+        confirmedAt: confirmed ? serverTimestamp() : null
+    };
+
+    try {
+        await updateDoc(registrationRef, updateData);
+    } catch (serverError) {
+         const permissionError = new FirestorePermissionError({
+            path: registrationRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw serverError;
+    }
 }
 
 // Raffle Items CRUD
