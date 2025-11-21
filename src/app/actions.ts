@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { getRegistration, setRegistrationStatus as dbSetRegistrationStatus, confirmRegistration, getRegistrationStatus, addRaffleItem, updateRaffleItem, deleteRaffleItem as dbDeleteRaffleItem, setRegistrationConfirmation as dbSetRegistrationConfirmation } from '@/lib/data';
+import { getRegistration, setRegistrationStatus as dbSetRegistrationStatus, confirmRegistration, getRegistrationStatus, addRaffleItem, updateRaffleItem as dbUpdateRaffleItem, deleteRaffleItem as dbDeleteRaffleItem, getRaffleItem, setRegistrationConfirmation as dbSetRegistrationConfirmation } from '@/lib/data';
 import { initializeFirebase } from '@/firebase';
 import { collection, getDocs, query, where, type Firestore, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
@@ -23,11 +23,13 @@ const userRegistrationSchema = z.object({
 const bulkUserRegistrationSchema = z.array(userRegistrationSchema);
 
 const raffleItemSchema = z.object({
-    id: z.string().optional(),
-    name: z.string().min(3, { message: "Prize name must be at least 3 characters." }),
-    description: z.string().min(3, { message: "Description must be at least 3 characters." }),
-    prizeType: z.enum(['minor', 'major', 'grand'], { required_error: "You must select a prize type." }),
+    id: z.string().min(1, { message: 'Item ID is required.' }),
+    name: z.string().min(3, { message: 'Item name must be at least 3 characters.' }),
+    description: z.string().min(3, { message: 'Description must be at least 3 characters.' }),
+    prizeType: z.enum(['minor', 'major', 'grand'], { required_error: 'Prize type is required.' }),
 });
+
+const bulkRaffleItemSchema = z.array(raffleItemSchema);
 
 export type FormState = {
   message: string;
@@ -50,57 +52,75 @@ export type BulkUploadState = {
 }
 
 export async function createOrUpdateRaffleItem(prevState: FormState, formData: FormData): Promise<FormState> {
-    const { firestore } = initializeFirebase();
-    if (!firestore) {
-        return { message: "Database not available.", errors: {} };
-    }
-
+    const isEditing = !!formData.get('isEditing');
+    
     const validatedFields = raffleItemSchema.safeParse({
-        id: formData.get('id') || undefined,
+        id: formData.get('id'),
         name: formData.get('name'),
         description: formData.get('description'),
         prizeType: formData.get('prizeType'),
     });
-    
+
     if (!validatedFields.success) {
         return {
-            message: 'Please review your entry and try again.',
+            message: 'Please review your entries and try again.',
+            isEditing,
             errors: validatedFields.error.flatten().fieldErrors,
         };
     }
 
-    const { id, ...itemData } = validatedFields.data;
+    const { firestore } = initializeFirebase();
+    if (!firestore) {
+        return {
+            message: 'Database service is not available. Please try again later.',
+            isEditing,
+            errors: { form: ['Database service is not available.'] }
+        };
+    }
+    
+    const itemData = validatedFields.data;
 
     try {
-        if (id) {
-            await updateRaffleItem(firestore, id, itemData);
+        if (!isEditing) {
+            const existingItem = await getRaffleItem(firestore, itemData.id);
+            if (existingItem) {
+                return {
+                    message: 'This Item ID is already in use.',
+                    isEditing,
+                    errors: { id: ['This Item ID must be unique.'] }
+                };
+            }
+            await addRaffleItem(firestore, itemData);
         } else {
-            // Firestore will auto-generate an ID if we don't provide one.
-            const newId = doc(collection(firestore, 'raffleItems')).id;
-            await addRaffleItem(firestore, { id: newId, ...itemData });
+            const { id, ...updateData } = itemData;
+            await dbUpdateRaffleItem(firestore, id, updateData);
         }
         revalidatePath('/admin/raffle-items');
         revalidatePath('/raffle');
-        return { message: `Successfully ${id ? 'updated' : 'created'} prize.` };
+        return { message: 'Item saved successfully.' };
     } catch (error: any) {
-        return { message: `Failed to save prize: ${error.message}` };
+        return {
+            message: 'An unexpected error occurred.',
+            isEditing,
+            errors: { form: [error.message] }
+        };
     }
 }
 
 
-export async function deleteRaffleItem(id: string): Promise<{ success: boolean; message?: string }> {
+export async function deleteRaffleItem(itemId: string) {
     const { firestore } = initializeFirebase();
     if (!firestore) {
-        return { success: false, message: "Database not available." };
+        throw new Error('Database service is not available.');
     }
     
     try {
-        await dbDeleteRaffleItem(firestore, id);
+        await dbDeleteRaffleItem(firestore, itemId);
         revalidatePath('/admin/raffle-items');
         revalidatePath('/raffle');
-        return { success: true };
-    } catch (e: any) {
-        return { success: false, message: e.message };
+        return { message: 'Item deleted successfully.' };
+    } catch (error: any) {
+        return { error: error.message };
     }
 }
 
@@ -154,6 +174,76 @@ Body: Hi ${existingRegistration.fullName}, thank you for registering for our eve
 ------------------------------------------`);
 
     redirect(`/success?name=${encodeURIComponent(existingRegistration.fullName)}`);
+}
+
+export async function bulkAddRaffleItems(prevState: BulkUploadState, items: any[]): Promise<BulkUploadState> {
+    const validatedFields = bulkRaffleItemSchema.safeParse(items);
+
+    if (!validatedFields.success) {
+        return {
+            message: 'CSV data is invalid. Please check the format.',
+            errors: validatedFields.error.issues.map(issue => `Row ${issue.path[0]}: ${issue.message}`),
+        };
+    }
+    
+    const { firestore } = initializeFirebase();
+    if (!firestore) {
+        return { message: 'Database service is not available.' };
+    }
+
+    const uniqueItemIds = new Set<string>();
+    const duplicateRows: string[] = [];
+    for (let i = 0; i < validatedFields.data.length; i++) {
+        const item = validatedFields.data[i];
+        if (uniqueItemIds.has(item.id)) {
+            duplicateRows.push(`Row ${i+2}: Duplicate Item ID \"${item.id}\" found in CSV.`);
+        }
+        uniqueItemIds.add(item.id);
+    }
+    if (duplicateRows.length > 0) {
+        return { message: "CSV contains duplicate Item IDs.", errors: duplicateRows };
+    }
+    
+    let successCount = 0;
+    const errors: string[] = [];
+    
+    try {
+        const existingItemsQuery = query(collection(firestore, "raffleItems"), where('__name__', 'in', Array.from(uniqueItemIds)));
+        const existingItemsSnapshot = await getDocs(existingItemsQuery);
+        const existingItemIds = new Set(existingItemsSnapshot.docs.map(doc => doc.id));
+
+        const batch = writeBatch(firestore);
+
+        for (let i = 0; i < validatedFields.data.length; i++) {
+            const item = validatedFields.data[i];
+            if (existingItemIds.has(item.id)) {
+                errors.push(`Row ${i + 2}: Item ID \"${item.id}\" already exists in the database.`);
+                continue;
+            }
+            
+            const { id, ...itemData } = item;
+            const newItemRef = doc(firestore, 'raffleItems', id);
+            batch.set(newItemRef, itemData);
+            successCount++;
+        }
+
+        if (successCount > 0) {
+            await batch.commit();
+        }
+
+        revalidatePath('/admin/raffle-items');
+        revalidatePath('/raffle');
+        return {
+            message: `Upload complete.`,
+            successCount,
+            errors,
+        };
+    } catch (error: any) {
+        return {
+            message: 'An unexpected error occurred during bulk upload.',
+            errors: [error.message],
+        };
+    }
 }
 
 export async function bulkAddUsers(prevState: BulkUploadState, users: any[]): Promise<BulkUploadState> {
