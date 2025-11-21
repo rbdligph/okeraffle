@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
-import { getRegistration, setRegistrationStatus as dbSetRegistrationStatus, confirmRegistration, getRegistrationStatus, addRaffleItem, updateRaffleItem, deleteRaffleItem as dbDeleteRaffleItem } from '@/lib/data';
+import { getRegistration, setRegistrationStatus as dbSetRegistrationStatus, confirmRegistration, getRegistrationStatus, addRaffleItem, updateRaffleItem, deleteRaffleItem as dbDeleteRaffleItem, setRegistrationConfirmation as dbSetRegistrationConfirmation } from '@/lib/data';
 import { initializeFirebase } from '@/firebase';
 import { collection, getDocs, query, where, type Firestore, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
@@ -240,6 +240,20 @@ export async function setRegistrationStatus(isOpen: boolean): Promise<{ success:
         revalidatePath('/'); // Revalidate the homepage to show the change
         revalidatePath('/admin'); // Revalidate the admin page
         return { success: true, message: `Registration is now ${isOpen ? 'open' : 'closed'}.` };
+    } catch (error: any) {
+        return { success: false, message: error.message || 'An unexpected error occurred.' };
+    }
+}
+
+export async function setManualConfirmation(email: string, confirm: boolean): Promise<{ success: boolean; message: string }> {
+    const { firestore } = initializeFirebase();
+    if (!firestore) {
+        return { success: false, message: 'Database service is not available.' };
+    }
+    try {
+        await dbSetRegistrationConfirmation(firestore, email, confirm);
+        revalidatePath('/admin/users');
+        return { success: true, message: `User confirmation status updated.` };
     } catch (error: any) {
         return { success: false, message: error.message || 'An unexpected error occurred.' };
     }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useActionState, useRef, useTransition, useMemo } from 'react';
@@ -12,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { getRegistrations } from '@/lib/data';
 import type { Registration } from '@/lib/types';
-import { bulkAddUsers, type BulkUploadState } from '@/app/actions';
+import { bulkAddUsers, type BulkUploadState, setManualConfirmation } from '@/app/actions';
 import { PlusCircle, Edit, Trash2, Loader2, Upload, Search, ArrowUpDown, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -146,6 +147,36 @@ function BulkUploadDialog({ isOpen, onOpenChange, onUploadComplete }: { isOpen: 
     );
 }
 
+function ConfirmationButton({ email, isConfirmed, onStatusChange }: { email: string, isConfirmed: boolean, onStatusChange: () => void }) {
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
+
+    const handleClick = () => {
+        startTransition(async () => {
+            const result = await setManualConfirmation(email, !isConfirmed);
+            if (result.success) {
+                toast({ title: 'Success', description: result.message });
+                onStatusChange();
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: result.message });
+            }
+        });
+    };
+
+    return (
+        <Button
+            variant={isConfirmed ? "destructive" : "default"}
+            size="sm"
+            onClick={handleClick}
+            disabled={isPending}
+        >
+            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isConfirmed ? 'Un-confirm' : 'Confirm'}
+        </Button>
+    );
+}
+
+
 function AdminDashboard({ 
     registrations,
     onSearchChange,
@@ -155,6 +186,7 @@ function AdminDashboard({
     sortConfig,
     onSort,
     onBulkUpload,
+    onStatusChange
 }: { 
     registrations: Registration[],
     onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -164,6 +196,7 @@ function AdminDashboard({
     sortConfig: { key: SortKey; direction: SortDirection };
     onSort: (key: SortKey) => void;
     onBulkUpload: () => void;
+    onStatusChange: () => void;
 }) {
   
   const SortableHeader = ({ sortKey, children }: { sortKey: SortKey, children: React.ReactNode }) => (
@@ -206,6 +239,7 @@ function AdminDashboard({
                   <SortableHeader sortKey="confirmed">Confirmed</SortableHeader>
                   <SortableHeader sortKey="createdAt">Registered At</SortableHeader>
                   <SortableHeader sortKey="confirmedAt">Confirmed At</SortableHeader>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -227,11 +261,14 @@ function AdminDashboard({
                        <TableCell className="text-right text-muted-foreground text-sm">
                         {reg.confirmedAt ? formatRegistrationDate(reg.confirmedAt) : 'N/A'}
                       </TableCell>
+                      <TableCell className="text-right">
+                          <ConfirmationButton email={reg.email} isConfirmed={reg.confirmed} onStatusChange={onStatusChange} />
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">
+                    <TableCell colSpan={6} className="text-center h-24">
                       No registrations found.
                     </TableCell>
                   </TableRow>
@@ -381,6 +418,7 @@ export default function UsersPage() {
         sortConfig={sortConfig}
         onSort={handleSort}
         onBulkUpload={handleBulkUpload}
+        onStatusChange={fetchRegistrations}
       />
       <BulkUploadDialog isOpen={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen} onUploadComplete={fetchRegistrations} />
     </>

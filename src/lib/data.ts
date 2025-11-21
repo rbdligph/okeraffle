@@ -1,3 +1,4 @@
+
 import {
   collection,
   getDocs,
@@ -112,6 +113,27 @@ export async function confirmRegistration(db: Firestore, email: string): Promise
         await updateDoc(registrationRef, updateData);
     } catch (serverError) {
         const permissionError = new FirestorePermissionError({
+            path: registrationRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        throw serverError;
+    }
+}
+
+export async function setRegistrationConfirmation(db: Firestore, email: string, confirmed: boolean): Promise<void> {
+    if (!db) throw new Error("Firestore is not initialized");
+    const registrationRef = doc(db, 'registrations', email);
+    const updateData = {
+        confirmed,
+        confirmedAt: confirmed ? serverTimestamp() : null
+    };
+
+    try {
+        await updateDoc(registrationRef, updateData);
+    } catch (serverError) {
+         const permissionError = new FirestorePermissionError({
             path: registrationRef.path,
             operation: 'update',
             requestResourceData: updateData,
