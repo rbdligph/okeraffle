@@ -29,11 +29,9 @@ export default async function Home() {
             {isOpen ? (
               <div className="w-full grid md:grid-cols-2 gap-8 items-stretch justify-center max-w-4xl">
                 <Card className="w-full flex flex-col">
-                  <CardHeader>
+                  <CardContent className="flex-1 flex flex-col justify-center">
                     <CardTitle>Confirm your Attendance</CardTitle>
                     <CardDescription>Enter your email address to confirm your registration.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 flex flex-col justify-center">
                     <RegistrationForm />
                   </CardContent>
                 </Card>
