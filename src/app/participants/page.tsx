@@ -23,8 +23,10 @@ export default function ParticipantsPage() {
             getWinners(firestore)
         ]);
         
-        regs.sort((a, b) => a.fullName.localeCompare(b.fullName));
-        setParticipants(regs);
+        const confirmedRegs = regs.filter(reg => reg.confirmed);
+        confirmedRegs.sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+        setParticipants(confirmedRegs);
         setWinners(wins);
         setLoading(false);
       }
@@ -45,7 +47,7 @@ export default function ParticipantsPage() {
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto p-4 md:p-8">
       <Card>
         <CardContent className="p-0">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-0">
@@ -74,7 +76,7 @@ export default function ParticipantsPage() {
               })
             ) : (
               <div className="col-span-full text-center h-24 flex items-center justify-center text-muted-foreground">
-                No registrations found.
+                No confirmed participants found.
               </div>
             )}
           </div>
