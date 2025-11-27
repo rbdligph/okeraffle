@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useFirestore } from '@/firebase';
 import { subscribeToRegistrations, subscribeToWinners } from '@/lib/data';
 import { Loader2 } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function ParticipantsPage() {
   const [winners, setWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [prevWinnersCount, setPrevWinnersCount] = useState(0);
+  const prevWinnersCount = useRef(0);
 
   useEffect(() => {
     if (!firestore) return;
@@ -35,10 +35,10 @@ export default function ParticipantsPage() {
       // Check if we have new winners to show confetti
       // We only show confetti if we already had some data (not on first load)
       // and the number of winners increased.
-      if (!loading && wins.length > prevWinnersCount && prevWinnersCount > 0) {
+      if (wins.length > prevWinnersCount.current && prevWinnersCount.current > 0) {
         setShowConfetti(true);
       }
-      setPrevWinnersCount(wins.length);
+      prevWinnersCount.current = wins.length;
 
       // Once we have initial data (or updates), we can stop loading.
       // Note: This might cause a quick flash if one loads before the other, 
@@ -51,7 +51,7 @@ export default function ParticipantsPage() {
       unsubscribeRegs();
       unsubscribeWinners();
     };
-  }, [firestore, loading, prevWinnersCount]);
+  }, [firestore]);
 
   const winnerMap = useMemo(() => {
     return new Map(winners.map(winner => [winner.registrationId, { prizeType: winner.prizeType, prizeName: winner.prizeName }]));
