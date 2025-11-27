@@ -4,13 +4,14 @@ export type Registration = {
   email: string;
   createdAt: Date;
   confirmed: Boolean;
+  confirmedAt?: Date;
 };
 
 export type RaffleItem = {
-    id: string;
-    name: string;
-    description: string;
-    prizeType: 'minor' | 'major' | 'grand';
+  id: string;
+  name: string;
+  description: string;
+  prizeType: 'minor' | 'major' | 'grand';
 };
 
 export type Winner = {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { getRegistrations, getWinners } from '@/lib/data';
+import { subscribeToRegistrations, subscribeToWinners } from '@/lib/data';
 import { Loader2 } from 'lucide-react';
 import type { Registration, Winner } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,23 +15,29 @@ export default function ParticipantsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
-      if (firestore) {
-        setLoading(true);
-        const [regs, wins] = await Promise.all([
-            getRegistrations(firestore),
-            getWinners(firestore)
-        ]);
-        
-        const confirmedRegs = regs.filter(reg => reg.confirmed);
-        confirmedRegs.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    if (!firestore) return;
 
-        setParticipants(confirmedRegs);
-        setWinners(wins);
-        setLoading(false);
-      }
-    }
-    loadData();
+    setLoading(true);
+
+    const unsubscribeRegs = subscribeToRegistrations(firestore, (regs) => {
+      const confirmedRegs = regs.filter(reg => reg.confirmed);
+      confirmedRegs.sort((a, b) => a.fullName.localeCompare(b.fullName));
+      setParticipants(confirmedRegs);
+    });
+
+    const unsubscribeWinners = subscribeToWinners(firestore, (wins) => {
+      setWinners(wins);
+      // Once we have initial data (or updates), we can stop loading.
+      // Note: This might cause a quick flash if one loads before the other, 
+      // but typically onSnapshot fires fast for initial data.
+      // For better UX, we could track loaded state for both.
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeRegs();
+      unsubscribeWinners();
+    };
   }, [firestore]);
 
   const winnerMap = useMemo(() => {
@@ -59,9 +65,9 @@ export default function ParticipantsPage() {
                   <div
                     key={participant.id}
                     className={cn("p-3 border", {
-                        "bg-destructive/40": prizeType === 'grand',
-                        "bg-primary/40": prizeType === 'major',
-                        "bg-accent/20": prizeType === 'minor',
+                      "bg-destructive/40": prizeType === 'grand',
+                      "bg-primary/40": prizeType === 'major',
+                      "bg-accent/20": prizeType === 'minor',
                     })}
                     title={`${participant.fullName}${winnerInfo ? ` - ${winnerInfo.prizeName}` : ''}`}
                   >
@@ -69,7 +75,7 @@ export default function ParticipantsPage() {
                       {participant.fullName}
                     </div>
                     {winnerInfo && (
-                        <div className="text-xs text-foreground/80 truncate">{winnerInfo.prizeName}</div>
+                      <div className="text-xs text-foreground/80 truncate">{winnerInfo.prizeName}</div>
                     )}
                   </div>
                 );
