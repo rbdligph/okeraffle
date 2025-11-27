@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
 import { useEffect, useState, useTransition } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Users, Settings, Rss } from 'lucide-react';
+import { Loader2, Users, Rss } from 'lucide-react';
 import { getRegistrations, getRegistrationStatus } from '@/lib/data';
 import { setRegistrationStatus } from '@/app/actions';
 import type { Registration } from '@/lib/types';
@@ -13,13 +13,13 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
-function RegistrationSwitch({ 
+function RegistrationSwitch({
     isOpen,
     onToggle
- }: { 
+}: {
     isOpen: boolean;
     onToggle: (checked: boolean) => void;
-  }) {
+}) {
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
 
@@ -46,7 +46,7 @@ function RegistrationSwitch({
             />
             <Label htmlFor="registration-status" className="flex flex-col">
                 <span>Registration {isOpen ? 'Open' : 'Closed'}</span>
-                 <span className="font-normal text-xs text-muted-foreground">
+                <span className="font-normal text-xs text-muted-foreground">
                     Turn this off to prevent new users from registering.
                 </span>
             </Label>
@@ -68,18 +68,18 @@ export default function AdminDashboardPage() {
         }
     }, [user, userLoading, router]);
 
-     useEffect(() => {
+    useEffect(() => {
         async function loadData() {
-        if (user && firestore) {
-            setLoading(true);
-            const [regs, status] = await Promise.all([
-                getRegistrations(firestore),
-                getRegistrationStatus(firestore)
-            ]);
-            setRegistrations(regs);
-            setIsRegistrationOpen(status.isOpen);
-            setLoading(false);
-        }
+            if (user && firestore) {
+                setLoading(true);
+                const [regs, status] = await Promise.all([
+                    getRegistrations(firestore),
+                    getRegistrationStatus(firestore)
+                ]);
+                setRegistrations(regs);
+                setIsRegistrationOpen(status.isOpen);
+                setLoading(false);
+            }
         }
         loadData();
     }, [user, firestore]);
@@ -93,18 +93,18 @@ export default function AdminDashboardPage() {
     }
 
     const confirmedRegistrations = registrations.filter(r => r.confirmed).length;
-    
+
     return (
         <main>
             <div className="space-y-8">
-                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 justify-center">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Confirmed Registrations</CardTitle>
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{confirmedRegistrations}</div>
+                            <div className="text-4xl font-bold">{confirmedRegistrations}</div>
                             <p className="text-xs text-muted-foreground">out of {registrations.length} pre-registered</p>
                         </CardContent>
                     </Card>
@@ -113,33 +113,29 @@ export default function AdminDashboardPage() {
                             <CardTitle className="text-sm font-medium">Registration Status</CardTitle>
                             <Rss className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
-                        <CardContent>
-                            <div className={`text-2xl font-bold ${isRegistrationOpen ? 'text-green-600' : 'text-destructive'}`}>
-                                {isRegistrationOpen ? 'Open' : 'Closed'}
+                        <CardContent className="space-y-4">
+                            <div>
+                                <div className={`text-2xl font-bold ${isRegistrationOpen ? 'text-green-600' : 'text-destructive'}`}>
+                                    {isRegistrationOpen ? 'Open' : 'Closed'}
+                                </div>
+                                <p className="text-xs text-muted-foreground">Live status of the registration form</p>
                             </div>
-                            <p className="text-xs text-muted-foreground">Live status of the registration form</p>
+                            <div className="pt-4 border-t">
+                                <RegistrationSwitch isOpen={isRegistrationOpen} onToggle={setIsRegistrationOpen} />
+                            </div>
                         </CardContent>
                     </Card>
-                 </div>
+                </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Settings size={20} /> Event Settings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                       <RegistrationSwitch isOpen={isRegistrationOpen} onToggle={setIsRegistrationOpen} />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Registration QR Code</CardTitle>
-                    <CardDescription>
-                        Display or print this code for users to scan and register.
-                    </CardDescription>
+                        <CardTitle>Registration QR Code</CardTitle>
+                        <CardDescription>
+                            Display or print this code for users to scan and register.
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="flex items-center justify-center p-6">
-                    <QrCodeDisplay />
+                        <QrCodeDisplay />
                     </CardContent>
                 </Card>
             </div>
