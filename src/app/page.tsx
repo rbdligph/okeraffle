@@ -39,7 +39,7 @@ export default async function Home() {
                 <Card className="w-full flex flex-col">
                   <CardHeader>
                     <CardTitle>Scan to Register</CardTitle>
-                    <CardDescription>Use your phone to scan the QR code and register on the go.</CardDescription>
+                    <CardDescription>Skip the lines! Use your phone to scan the QR code and confirm your registration.</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col items-center justify-center p-6 min-h-[280px]">
                     <QrCodeDisplay />
