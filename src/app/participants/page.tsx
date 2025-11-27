@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
 import { subscribeToRegistrations, subscribeToWinners } from '@/lib/data';
 import { Loader2 } from 'lucide-react';
+import { Confetti } from '@/components/confetti';
 import type { Registration, Winner } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,8 @@ export default function ParticipantsPage() {
   const [participants, setParticipants] = useState<Registration[]>([]);
   const [winners, setWinners] = useState<Winner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [prevWinnersCount, setPrevWinnersCount] = useState(0);
 
   useEffect(() => {
     if (!firestore) return;
@@ -27,6 +30,15 @@ export default function ParticipantsPage() {
 
     const unsubscribeWinners = subscribeToWinners(firestore, (wins) => {
       setWinners(wins);
+
+      // Check if we have new winners to show confetti
+      // We only show confetti if we already had some data (not on first load)
+      // and the number of winners increased.
+      if (!loading && wins.length > prevWinnersCount && prevWinnersCount > 0) {
+        setShowConfetti(true);
+      }
+      setPrevWinnersCount(wins.length);
+
       // Once we have initial data (or updates), we can stop loading.
       // Note: This might cause a quick flash if one loads before the other, 
       // but typically onSnapshot fires fast for initial data.
@@ -38,7 +50,7 @@ export default function ParticipantsPage() {
       unsubscribeRegs();
       unsubscribeWinners();
     };
-  }, [firestore]);
+  }, [firestore, loading, prevWinnersCount]);
 
   const winnerMap = useMemo(() => {
     return new Map(winners.map(winner => [winner.registrationId, { prizeType: winner.prizeType, prizeName: winner.prizeName }]));
@@ -54,6 +66,7 @@ export default function ParticipantsPage() {
 
   return (
     <div className="container mx-auto p-4 md:p-8">
+      {showConfetti && <Confetti onComplete={() => setShowConfetti(false)} />}
       <Card>
         <CardContent className="p-0">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-0">
