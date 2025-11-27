@@ -8,6 +8,7 @@ import { Confetti } from '@/components/confetti';
 import type { Registration, Winner } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 export default function ParticipantsPage() {
   const firestore = useFirestore();
@@ -88,7 +89,11 @@ export default function ParticipantsPage() {
                       {participant.fullName}
                     </div>
                     {winnerInfo && (
-                      <div className="text-xs text-foreground/80 truncate">{winnerInfo.prizeName}</div>
+                      <div className="text-xs text-foreground/80 truncate">{winnerInfo.prizeName} <Badge variant={
+                        prizeType === 'grand' ? 'destructive' :
+                          prizeType === 'major' ? 'default' :
+                            'secondary'
+                      } className="capitalize">{prizeType}</Badge> </div>
                     )}
                   </div>
                 );
