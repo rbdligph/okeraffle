@@ -17,12 +17,11 @@ export default async function Home() {
         <div className="w-full px-4 md:px-6 flex flex-col items-center justify-center">
           <div className="flex flex-col items-center justify-center space-y-8 text-center">
             <div className="space-y-4">
-              <h1 className="text-4xl font-bold font-headline tracking-tighter sm:text-5xl xl:text-6xl/none text-accent">
-                Join the Slumber Christmas Party with Cody
+              <h1 className="text-4xl font-bold font-christmas tracking-tighter sm:text-5xl xl:text-6xl/none text-accent">
+                Making spirits bright! Merry Christmas Cody
               </h1>
               <p className="max-w-[600px] mx-auto text-muted-foreground md:text-xl">
-                Register for our event and instantly get your raffle number. Don&apos;t miss out on your chance to win
-                amazing prizes!
+                Confirm your attendance and gets a chance to win amazing prizes!
               </p>
             </div>
 
@@ -30,15 +29,17 @@ export default async function Home() {
               <div className="w-full grid md:grid-cols-2 gap-8 items-stretch justify-center max-w-4xl">
                 <Card className="w-full flex flex-col">
                   <CardContent className="flex-1 flex flex-col justify-center">
-                    <CardTitle>Confirm your Attendance</CardTitle>
-                    <CardDescription>Enter your email address to confirm your registration.</CardDescription>
+                    <CardHeader>
+                      <CardTitle>Confirm your Attendance</CardTitle>
+                      <CardDescription>Enter your email address to confirm your registration.</CardDescription>
+                    </CardHeader>
                     <RegistrationForm />
                   </CardContent>
                 </Card>
                 <Card className="w-full flex flex-col">
                   <CardHeader>
                     <CardTitle>Scan to Register</CardTitle>
-                    <CardDescription>Use your phone to scan the QR code and register on the go.</CardDescription>
+                    <CardDescription>Skip the lines! Use your phone to scan the QR code and confirm your registration.</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col items-center justify-center p-6 min-h-[280px]">
                     <QrCodeDisplay />
@@ -46,13 +47,13 @@ export default async function Home() {
                 </Card>
               </div>
             ) : (
-                <Alert variant="destructive" className="max-w-md text-left">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Registration Closed</AlertTitle>
-                  <AlertDescription>
-                    We're sorry, but registration for this event is currently closed. Please check back later or contact the event organizer.
-                  </AlertDescription>
-                </Alert>
+              <Alert variant="destructive" className="max-w-md text-left">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Registration Closed</AlertTitle>
+                <AlertDescription>
+                  We're sorry, but registration for this event is currently closed. Please check back later or contact the event organizer.
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         </div>
